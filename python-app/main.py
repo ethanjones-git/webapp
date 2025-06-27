@@ -19,8 +19,6 @@ class Main:
 
     def connect_to_database(self):
 
-        uri = "mongodb+srv://super_user:Z17DwuaZlwCAxOPH@dogbeachwebapp.dc02mag.mongodb.net/?retryWrites=true&w=majority&appName=dogbeachwebapp"
-
         # Create a new client and connect to the server
         client = MongoClient(uri, server_api=ServerApi('1'))
 
