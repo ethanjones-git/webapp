@@ -1,13 +1,14 @@
 import subprocess
 import time
 import datetime
+import uuid
 
 '''
 Run for 5 mins, export video and run. 
 '''
 
 
-class VieoRecorder:
+class VideoRecorder:
 
     def __init__(self, mins_interval, stream_link, export_name):
 
@@ -37,7 +38,7 @@ class VieoRecorder:
         proc.terminate()  # or proc.kill()
         proc.wait()
 
-        return "sub process timed out"
+        return id
 
         #end_dte = dte.strftime("%%H_%M_%S")
         #dte_time = str_dte + "_" + end_dte
@@ -53,7 +54,7 @@ if __name__ == '__main__':
 
         export_name = f"test_{count}"
 
-        vr  = VieoRecorder(mins_interval=mins_interval,
+        vr  = VideoRecorder(mins_interval=mins_interval,
                             stream_link=stream_link,
                             export_name=export_name)
         

@@ -2,3 +2,6 @@
 venv/
 
 .env
+passwords.env
+
+notes.txt

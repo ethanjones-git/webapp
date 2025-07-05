@@ -1,6 +1,10 @@
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 import os
 from dotenv import load_dotenv
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
+from pathlib import Path
+import datetime
 
 class BlobStorage:
 
@@ -41,14 +45,61 @@ class BlobStorage:
         print(f"✅ Uploaded '{path}' to container '{self.CONTAINER_NAME}' as blob '{name}'.")
 
 
+class MongoConnection:
+    def __init__(self):
+        pass
+
+    def connect_to_database(self):
+
+        # mongo uri
+        load_dotenv("passwords.env")
+        uri = os.getenv("mongo_uri")
+
+        # Create a new client and connect to the server
+        client = MongoClient(uri, server_api=ServerApi('1'))
+
+        # Ping to confirm a successful connection
+        
+        client.admin.command('ping')
+        print("Pinged your deployment. You successfully connected to MongoDB!")
+            
+        return client.prod
+
+    def video_meta_data(self,id):
+
+        # Connect to database
+        db = self.connect_to_database()
+
+        try:
+
+            # post this information
+            post = {
+                    "author": "Ethan",
+                    "id":id,
+                    "text": "Test post",
+                    "tags": ["test", "video"],
+                    "date": datetime.datetime.now(tz=datetime.timezone.utc),
+                }
+            
+            video_meta = db.video_meta
+            out = video_meta.insert_one(post).inserted_id
+                    
+            print(out)
+            
+            return f"Post was successful: {out}"
+        
+        except Exception as e:
+            return e
+
+    def view_posted_item(self):
+
+        db = self.connect_to_database()
+        
+        print(db['posts'].list_indexes())
+        pass
+
+    def dev_delete_items():
+        pass
+
 if __name__ == "__main__":
-
-    # class class
-    bs = BlobStorage()
-
-    # parameters
-    video_name = 'test_5.mp4'
-    path =   os.getcwd()+"/data/output.mp4"
-
-    bs.data_push(name=video_name,
-                 path=path)
+    pass

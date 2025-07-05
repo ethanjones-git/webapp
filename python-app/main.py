@@ -1,124 +1,119 @@
-
-from pymongo.mongo_client import MongoClient
-from pymongo.server_api import ServerApi
 import datetime
-from playwright.sync_api import sync_playwright
-from selenium import webdriver
-from webdriver_manager.chrome import ChromeDriverManager
-import requests
-from scrapper import screenshot
 import os
-import gridfs
-from bson.binary import Binary
-from data_connection import VideoBlob
+from video_recorder import VideoRecorder
+import uuid
+from dotenv import load_dotenv
+from data_connection import MongoConnection, BlobStorage
+from pathlib import Path
 
+class RecordExportDelete:
+    
+    def __init__(self, video_length, stream_link):
 
-class Main:
-    def __init__(self):
+        self.video_length = video_length
+
+        self.stream_link = stream_link
+
         pass
 
-    def connect_to_database(self):
+    def record_export(self,id):
 
-        uri = "mongodb+srv://super_user:Z17DwuaZlwCAxOPH@dogbeachwebapp.dc02mag.mongodb.net/?retryWrites=true&w=majority&appName=dogbeachwebapp"
+        export_name = f"{id}_video.mp4"
 
-        # Create a new client and connect to the server
-        client = MongoClient(uri, server_api=ServerApi('1'))
-
-        # Ping to confirm a successful connection
-        try:
-            client.admin.command('ping')
-            print("Pinged your deployment. You successfully connected to MongoDB!")
+        vr  = VideoRecorder(mins_interval=self.video_length,
+                                stream_link= self.stream_link,
+                                export_name='data/'+export_name)
             
-                
-        except Exception as e:
-            print(e)
-
-        db = client.dogbeachwebapp
-
-        # Return connection
-        return db
-
-    def post_items(self):
-
-        # Connect to database
-        db = self.connect_to_database()
+        out = vr.record_video()
+        print(out)
+    
+    def mongo_export(self,id):
 
         try:
 
-            # post this information
-            post = {
-                    "author": "Ethan",
-                    "text": "Test post",
-                    "tags": ["mongodb", "python", "pymongo"],
-                    "date": datetime.datetime.now(tz=datetime.timezone.utc),
-                }
+            # mongo connection
+            try:
+                mongo_connection = MongoConnection()
             
-            posts = db.posts
-            post_id = posts.insert_one(post).inserted_id
+            except Exception as e:
+                return f"Failed at mongo connection: {e}"
             
-            return "Post was successful"
+            # mongo push
+            try:
+                mongo_connection.video_meta_data(id=id)
+            
+            except Exception as e:
+                return f"Failed at mongo push: {e}"
+            
+            return f"Mongo sucess at: {datetime.datetime.now()}"
         
         except Exception as e:
-            return e
-
-    def post_img(self, from_location,image_name):
-
-        db = self.connect_to_database()
-
-        with open(from_location + "/" + image_name, "rb") as f:
-            binary_data = Binary(f.read())
+            return f"Mongo Error: {e}"
+        
+    def blob_export(self,id):
 
         try:
-            post = {
-                "name":image_name,
-                "image":binary_data,
-                "date": datetime.datetime.now(tz=datetime.timezone.utc)
-            }
 
-            posts = db.posts
-            post_id = posts.insert_one(post).inserted_id
-
-            return post_id
+            # blob push
+            bs = BlobStorage()
+            bs.data_push(name=f'{id}_video.mp4',
+                    path=os.getcwd()+f'/data'+ f'/{id}_video.mp4')
+            
+            return f"Blob export success at:{datetime.datetime.now()}"
         
         except Exception as e:
-            return e
-
-    def view_posted_item(self):
-
-        db = self.connect_to_database()
-        
-        #print(db.list_collection_names())
-        print(db['posts'].list_indexes())
-
-    def dev_delete_items():
-        '''
-        
-        #db = client.dogbeachwebapp
-        #print(client.list_database_names())
-        #print(client['dogbeachwebapp'].list_collection_names())
+            return f"Error: {e}"
+    
+    def internal_delete(self,id):
 
         try:
 
-            myquery = {"author": "Ethan"}
+            file=Path(os.getcwd()+f'/data'+ f'/{id}_video.mp4')
+            file.unlink()
 
-            client['dogbeachwebapp']['posts'].delete_one(myquery)
+            return f"delete successful at:{datetime.datetime.now()}"
         
-        except:
-            print("Fail")
-        '''
-        pass
+        except Exception as e:
+            return f"Delete failed: {e}"
+        
+def execute_red_procedure(total_video_length, video_length, stream_link):
+    
+    # class
+    red = RecordExportDelete(video_length, stream_link)
+
+    # time when loop terminates
+    future_utc = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(minutes=total_video_length)
+
+     # while current is less than future time
+    while datetime.datetime.now(tz=datetime.timezone.utc) < future_utc:
+     
+        try:
+            # unique id
+            id = str(uuid.uuid4())
+
+            # record export
+            out = red.record_export(id=id)
+            print(out)
+
+            # meta data export
+            out = red.mongo_export(id=id)
+            print(out)
+
+            # blob export
+            out = red.blob_export(id=id)
+            print(out)
+
+            # internal delete
+            out = red.internal_delete(id=id)
+            print(out)
 
 
-if __name__ == "__main__":
+        except Exception as e:
+            print(f"Error: {e}")
 
-    container_name = 'videos'
-    input_data_path = os.getcwd() + '/data/output.mp4'
+if __name__ == '__main__':
+    
+    execute_red_procedure(total_video_length = 5,
+                          video_length = 1,
+                          stream_link = "https://www.youtube.com/watch?v=x10vL6_47Dw")
 
-    vb = VideoBlob(container_name=container_name, 
-                   input_data_path = input_data_path)
-
-    vb.push_data('test_2.mp4')
-
-#from_location = os.getcwd() + '/data'
-
-#add_img(from_location,out+'_image.jpg')
